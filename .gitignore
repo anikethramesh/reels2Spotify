@@ -1,0 +1,24 @@
+# Secrets & credentials
+credentials.json
+spotify_token_cache.json
+
+# Instagram browser session
+ig_profile/
+
+# Runtime output
+reels_audio.txt
+spotify_missing.txt
+state.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Misc
+.DS_Store
