@@ -69,7 +69,7 @@ def _ensure_profile_exists(profile_dir):
         )
 
 
-async def scrape_reels(username, max_scrolls=25, profile_dir=PROFILE_DIR):
+async def scrape_reels(username, max_scrolls=500, profile_dir=PROFILE_DIR):
     _ensure_profile_exists(profile_dir)
 
     async with async_playwright() as p:
@@ -90,22 +90,25 @@ async def scrape_reels(username, max_scrolls=25, profile_dir=PROFILE_DIR):
         seen = set()
         stagnant_rounds = 0
         scrolls = 0
-        while stagnant_rounds < 3 and scrolls < max_scrolls:
+        while stagnant_rounds < 8 and scrolls < max_scrolls:
             links = await page.eval_on_selector_all(
                 "a[href*='/reel/']",
-                "els => els.map(e => e.href)",
+                f"els => els.map(e => e.href).filter(h => h.includes('/{username}/'))",
             )
             new = set(links) - seen
             if not new:
                 stagnant_rounds += 1
+                print(f"\r  scroll {scrolls+1}/{max_scrolls} | {len(seen)} reels | stagnant {stagnant_rounds}/8   ", end="", flush=True)
             else:
                 stagnant_rounds = 0
                 seen.update(new)
+                print(f"\r  scroll {scrolls+1}/{max_scrolls} | {len(seen)} reels (+{len(new)})   ", end="", flush=True)
 
             await page.mouse.wheel(0, 4000)
-            await page.wait_for_timeout(2000)
+            await page.wait_for_timeout(4000)
             scrolls += 1
 
+        print(f"\r  Done. Total reels found: {len(seen)}                    ")
         await context.close()
         return list(seen)
 
@@ -124,9 +127,11 @@ async def _extract_audio_label(page):
             if text:
                 return text
 
-    text = await page.locator("a:has-text('audio')").first.text_content()
-    if text:
-        return text.strip()
+    loc = page.locator("a:has-text('audio')")
+    if await loc.count():
+        text = (await loc.first.text_content() or "").strip()
+        if text:
+            return text
     return "UNKNOWN"
 
 
@@ -143,7 +148,8 @@ async def get_reel_audio(links, profile_dir=PROFILE_DIR):
         page.set_default_timeout(20000)
 
         results = []
-        for url in links:
+        total = len(links)
+        for i, url in enumerate(links, 1):
             try:
                 await page.goto(url, wait_until="domcontentloaded")
                 await _dismiss_cookies(page)
@@ -151,7 +157,9 @@ async def get_reel_audio(links, profile_dir=PROFILE_DIR):
             except Exception:
                 audio = "UNKNOWN"
             results.append((url, audio))
+            print(f"\r  [{i}/{total}] {audio}                              ", end="", flush=True)
             await page.wait_for_timeout(800)
 
+        print()
         await context.close()
         return results

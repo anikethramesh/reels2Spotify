@@ -2,7 +2,7 @@ import json
 import os
 
 from scraper import scrape_reels, get_reel_audio
-from spotify import spotify_client, parse_audio_entries, create_playlist
+from spotify import spotify_client, parse_audio_entries, create_playlist as spotify_create_playlist
 
 
 CREDS = json.load(open("credentials.json"))
@@ -18,13 +18,23 @@ def _spotify_config():
     return client_id, client_secret, redirect_uri
 
 
+def _youtube_config():
+    cfg = CREDS.get("youtube", {})
+    client_id = cfg.get("client_id")
+    client_secret = cfg.get("client_secret")
+    if not client_id or not client_secret:
+        raise RuntimeError("Missing YouTube client_id/client_secret in credentials.json")
+    return client_id, client_secret
+
+
 async def run_pipeline(
     username,
-    max_scrolls=25,
+    max_scrolls=500,
     playlist_name="",
     playlist_public=False,
     allow_interactive=False,
     reels_audio_path="reels_audio.txt",
+    service="spotify",
 ):
     print(f"Scraping reels for {username}...")
     links = await scrape_reels(username, max_scrolls=max_scrolls)
@@ -39,24 +49,42 @@ async def run_pipeline(
     entries = parse_audio_entries(audio_map)
     print(f"Searchable audio labels: {len(entries)}")
 
-    client_id, client_secret, redirect_uri = _spotify_config()
-    sp = spotify_client(
-        client_id=client_id,
-        client_secret=client_secret,
-        redirect_uri=redirect_uri,
-        cache_path="spotify_token_cache.json",
-        allow_interactive=allow_interactive,
-    )
-
-    print("Creating Spotify playlist...")
-    playlist_url, tracks_added, missing_count = create_playlist(
-        sp,
-        entries,
-        playlist_name=playlist_name,
-        public=playlist_public,
-        username=username,
-        missing_path="spotify_missing.txt",
-    )
+    if service == "youtube":
+        from youtube import youtube_client, create_playlist as yt_create_playlist
+        client_id, client_secret = _youtube_config()
+        client = youtube_client(
+            client_id=client_id,
+            client_secret=client_secret,
+            cache_path="youtube_token_cache.json",
+            allow_interactive=allow_interactive,
+        )
+        print("Creating YouTube playlist...")
+        playlist_url, tracks_added, missing_count = yt_create_playlist(
+            client,
+            entries,
+            playlist_name=playlist_name,
+            public=playlist_public,
+            username=username,
+            missing_path="youtube_missing.txt",
+        )
+    else:
+        client_id, client_secret, redirect_uri = _spotify_config()
+        sp = spotify_client(
+            client_id=client_id,
+            client_secret=client_secret,
+            redirect_uri=redirect_uri,
+            cache_path="spotify_token_cache.json",
+            allow_interactive=allow_interactive,
+        )
+        print("Creating Spotify playlist...")
+        playlist_url, tracks_added, missing_count = spotify_create_playlist(
+            sp,
+            entries,
+            playlist_name=playlist_name,
+            public=playlist_public,
+            username=username,
+            missing_path="spotify_missing.txt",
+        )
 
     return {
         "playlist_url": playlist_url,

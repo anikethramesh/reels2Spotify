@@ -28,7 +28,8 @@ def parse_audio_entries(audio_map):
     for url, audio in audio_map:
         if not audio:
             continue
-        if "original audio" in audio.lower():
+        title_part = audio.split("•", 1)[-1].strip().lower() if "•" in audio else audio.lower()
+        if title_part == "original audio":
             continue
         if audio.strip().upper() == "UNKNOWN":
             continue

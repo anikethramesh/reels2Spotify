@@ -15,9 +15,10 @@ def _parse_args():
         default=CREDS.get("instagram", {}).get("target_username", ""),
         help="Instagram username to scrape",
     )
-    parser.add_argument("--max-scrolls", type=int, default=25)
+    parser.add_argument("--max-scrolls", type=int, default=500)
     parser.add_argument("--playlist-name", default="")
     parser.add_argument("--playlist-public", action="store_true")
+    parser.add_argument("--service", choices=["spotify", "youtube"], default="spotify")
     return parser.parse_args()
 
 
@@ -32,11 +33,12 @@ async def _main():
             playlist_name=args.playlist_name,
             playlist_public=args.playlist_public,
             allow_interactive=False,
+            service=args.service,
         )
         print(result)
     except RuntimeError as e:
         msg = str(e)
-        if msg.startswith("SPOTIFY_AUTH_REQUIRED:"):
+        if msg.startswith("YOUTUBE_AUTH_REQUIRED:") or msg.startswith("SPOTIFY_AUTH_REQUIRED:"):
             print("Spotify authorization required. Open this URL in your browser:")
             print(msg.split(":", 1)[1])
             return
