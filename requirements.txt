@@ -1,0 +1,6 @@
+fastapi==0.135.2
+uvicorn==0.42.0
+playwright==1.58.0
+spotipy==2.26.0
+pydantic==2.12.5
+requests==2.32.5
