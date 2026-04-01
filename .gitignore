@@ -1,14 +1,17 @@
 # Secrets & credentials
 credentials.json
 spotify_token_cache.json
+youtube_token_cache.json
+*.apps.googleusercontent.com.json
 
 # Instagram browser session
 ig_profile/
 
-# Runtime output
-reels_audio.txt
-spotify_missing.txt
-state.json
+# Per-profile data (songs.json is ground truth, keep it; ignore everything else)
+instaDB/*/*_state.json
+instaDB/*/*_missing.txt
+instaDB/*/youtube_checkpoint_*.json
+instaDB/*/spotify_checkpoint.json
 
 # Python
 __pycache__/
